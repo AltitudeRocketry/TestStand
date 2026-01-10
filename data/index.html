@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Stand</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/chart.js"></script>
+</head>
+<body>
+    <h1>Test Stand</h1>
+    <h3>SD CARD: <span id="SD"></span></h3>
+    <h3>Launch Continuity: <span id="cont"> </span> </h3>
+
+    
+    <div>
+    <h3>Thrust: <span id="Thrust"></span></h3>
+    <h3>Impulso: <span id="impulse"></span></h3>
+    <div class="graph">
+        <canvas id="ThrustGraph" height="300" width="300"></canvas>
+    </div>
+    </div>
+
+
+
+    <div id="overlay" class="overlay">
+        <div id="overlay_content" class="overlay_content">
+            <p id="timer" class="timer"></p>
+        </div>
+    </div>
+
+    <button id="set_button" class="button button1" onclick="cmd('set')">Set</button>
+    <button id="calibrate_button"class="button button1" onclick="cmd('calibrate')">Calibrate</button>
+    <button id="test_button" class="button button1" onclick="cmd('test')">Test</button>
+    <button id="ignite_button" class="ignite_button" onclick="cmd('ignite')">Ignite</button>    
+    <button id="stop_button" class="stop_button" onclick="cmd('stop')">Stop</button>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
