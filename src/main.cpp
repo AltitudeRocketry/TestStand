@@ -309,10 +309,41 @@ switch (type){
               Serial.print(calibrationValue);
             }
             else if (message.startsWith("CMD_CALIBRATE:")){
-              String valStr = message.substring(14);
-              KnownWeight = valStr.toFloat();
-              Serial.print(KnownWeight);
+            String valStr = message.substring(14);
 
+              if (valStr == "START"){
+                Serial.println("Tare Scale");
+
+                scale.tare(10);
+
+                Serial.println("[CAL] Tare complete. Ready for known weight.");
+                ws.textAll("{\"Calibration status\":\"TARE_OK\"}");
+              }
+              else if (valStr.startsWith("WEIGHT_")){
+                String weightStr = valStr.substring(7);
+                float knownWeight = weightStr.toFloat() / 1000;
+
+                float rawValue = scale.get_value(10);
+
+                // 2. Calculate the scale factor (Raw Units per g)
+                float newCalibrationFactor = rawValue / knownWeight;
+
+                // 3. Apply the new factor to HX711
+                scale.set_scale(newCalibrationFactor);
+
+                Serial.print("[CAL] New scale factor set: ");
+                Serial.println(newCalibrationFactor);
+
+                // Optional: Save newCalibrationFactor to Preferences/EEPROM here
+                
+              ws.textAll("{\"Calibration status\":\"CALIBRATION_OK\", \"Calibration Value\":" + String(newCalibrationFactor) + "}");
+              }else {
+                Serial.println("[CAL ERROR] Invalid weight value received.");
+                ws.textAll("{\"Calibration status\":\"CALIBRATION_ERROR\",\"msg\":\"Invalid weight value\"}");
+              }
+
+              
+            
             }
             else if(message.startsWith("CMD_TEST:")){
               filename = message.substring(9);
