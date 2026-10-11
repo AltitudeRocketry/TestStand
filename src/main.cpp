@@ -33,6 +33,7 @@ File myFile;
 #define SD_CS_PIN 5
 
 #define CONTPIN 2
+#define PRESSURE_PIN 34
 
 const uint8_t LOADCELL_DOUT_PIN = 32;  //Data pin for hx711
 const uint8_t LOADCELL_SCK_PIN = 33;   //sck pin for hx711
@@ -46,6 +47,9 @@ bool continuityPin;
 
 float thrust;
 float impulse;
+float pressureVoltage;
+float pressurePSI;
+
 uint32_t testStartTime = millis();
 uint32_t now;
 uint32_t dt;
@@ -63,6 +67,7 @@ String filename;
 
 struct __attribute__((__packed__)) TelemetryPacket {
   float thrust;            // 4 bytes
+  float pressurePSI;       // 4 bytes
   uint32_t currentTestTime;// 4 bytes
   uint8_t continuityPin;   // 1 byte
   bool sd_state;
@@ -88,7 +93,7 @@ String test(){
         Serial.print("Not working");
       }
       else{
-        myFile.println("timestamp, thrust, continuity");
+        myFile.println("timestamp, thrust, pressure, continuity");
         myFile.close();
         sd_state = true;
       }
@@ -116,7 +121,7 @@ void dataStore(){
     myFile.print(",");
     myFile.println(thrust,3);
     myFile.print(",");
-    myFile.println(continuityPin);
+    myFile.println(pressurePSI,2);
     myFile.close();
   }
   else{
@@ -139,16 +144,30 @@ void measureTask(void * pvParameters){
 
       thrust = scale.get_units()/1000; 
       impulse += thrust * 9.81 * dt;
-      // Serial.print("Time: ");
-      // Serial.println(currentTestTime);
-      // Serial.print("Thrust: ");
-      // Serial.println(thrust);
+
+      uint32_t adcSum = 0;
+
+      for(int i = 0; i < 8; i++){
+        adcSum += analogRead(PRESSURE_PIN);
+      }
+
+      int pressureRaw = adcSum / 8;
+
+      pressureVoltage = (pressureRaw / 4095.0) * 3.3;
+
+      // Example calibration:
+      // 0.5V = 0 PSI
+      // 4.5V = 1000 PSI
+      pressurePSI = ((pressureVoltage - 0.157) * 1000.0) / 2.813;
 
       // dataStore();
       if(myFile && sd_state){
         myFile.print(currentTestTime);
         myFile.print(",");
-        myFile.println(thrust,3);
+        myFile.print(thrust,3);
+        myFile.print(",");
+        myFile.println(pressurePSI,3);
+
       }
       else{
           Serial.print("SD ERROR");
@@ -197,6 +216,7 @@ void DataTransmission(void * pvParameters) {
     if (TestFireActive && ws.count() > 0 ) {
 
       packet.thrust = thrust;
+      packet.pressurePSI = pressurePSI;
       packet.currentTestTime = currentTestTime;
       packet.continuityPin = continuityPin;
       packet.sd_state = sd_state;
@@ -259,6 +279,11 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(SD_CS_PIN, OUTPUT);
+  pinMode(PRESSURE_PIN, INPUT);
+  
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+  
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
   scale.set_scale();
   scale.tare();
